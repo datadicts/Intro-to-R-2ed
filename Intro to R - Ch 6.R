@@ -12,6 +12,28 @@ cat("\014")
 ## "yellow-tripdata_2017-06.csv" from the link on intro-to-r.com
 ## and store it in working directory for this project.
 
+## Reading in our csv file using fread() from package data.table 
+# Installing data.table (if required) and loading it into memory
+if (!require("data.table")) install.packages("data.table")
+library("data.table")
+
+#Checking and setting number of cpu threads
+setDTthreads(0)
+getDTthreads(verbose=TRUE)
+
+# Bringing in column headers as names and using them to set names
+### Run as a block of text to time #########
+ptm <- proc.time()
+header <- read.table("yellow_tripdata_2018-07.csv", header = TRUE,
+                     sep=",", nrow = 1)
+DF <- fread("yellow_tripdata_2018-07.csv", skip=1, sep=",",
+            header=FALSE, data.table=FALSE)
+setnames(DF, colnames(header))
+rm(header)
+FREAD_READ_TIME <- (proc.time() - ptm)
+FREAD_READ_TIME
+########################
+
 # CHeck to see if RPostgreSQL package is installed, and install it if it's not
 if (!require("RPostgreSQL")) install.packages("RPostgreSQL")
 
@@ -24,9 +46,49 @@ pg = dbDriver("PostgreSQL")
 
 # Local Postgres.app database; no password by default
 # Of course, you fill in your own database information here.
-con = dbConnect(pg, user="postgres", password="",
+con = dbConnect(pg, user="postgres", password="Pain@2type",
                 host="localhost", port=5432, dbname="postgres")
 dbListTables(con)
+dbWriteTable(con, "YTDATA", 
+             value = DF, append = TRUE, row.names = FALSE)
+
+## First put all file names into a list 
+library(data.table)
+all.files <- list.files(pattern = "*.csv")
+
+## Read data using fread
+readFun <- function( filename ) {
+  
+  message(paste("Processing: ",filename))
+  # read in the data
+  
+  header <- read.table(filename, header = TRUE,
+                       sep=",", nrow = 1)
+  DF <- fread(filename, skip=1, sep=",",
+              header=FALSE, data.table=FALSE)
+  setnames(DF, colnames(header))
+  rm(header)
+  dbWriteTable(con, "YTDATA", 
+               value = DF, append = TRUE, row.names = FALSE)
+  return( DF )
+}
+
+
+
+# then using 
+mylist <- lapply(all.files, readFun)
+
+
+
+if (!require("plyr")) install.packages("plyr")
+library( plyr )
+
+
+# execute that function across all files, outputting a data frame
+DF <- plyr::ldply( .data = list.files(pattern="yellow*.csv"),
+                          .fun = readFun,
+                          .parallel = TRUE )
+
 dbListFields(con, "yt_2018")
 # rs <- dbSendQuery(con,"SELECT * from temp")
 long_trips <- dbGetQuery(con, "select * from temp where trip_distance > 100")
