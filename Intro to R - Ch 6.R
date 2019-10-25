@@ -5,8 +5,9 @@
 
 # Clean Up 
 rm(list=ls(all=TRUE))
-cat("\014") 
-setwd("./YTData/")
+cat("\014")
+getwd()
+
 ## Reading in external data
 ## Prior to attempting this section, download file
 ## "yellow-tripdata_2017-06.csv" from the link on intro-to-r.com
@@ -23,6 +24,7 @@ getDTthreads()
 
 ########################
 
+
 # CHeck to see if RPostgreSQL package is installed, and install it if it's not
 if (!require("RPostgreSQL")) install.packages("RPostgreSQL")
 
@@ -38,8 +40,12 @@ pg = dbDriver("PostgreSQL")
 con = dbConnect(pg, user="postgres", password="Pain@2type",
                 host="localhost", port=5432, dbname="postgres")
 dbListTables(con)
+# remove table from database
+dbRemoveTable(con, "ytdata")
+
 
 ## First put all file names into a list 
+setwd("./YTData/")
 library(data.table)
 all.files <- list.files(pattern = "*.csv")
 
@@ -56,7 +62,7 @@ readFun <- function( filename ) {
   setnames(DF, colnames(header))
   rm(header)
   message(paste("Writing to PostgreSQL"))
-  dbWriteTable(con, "YTDATA", 
+  dbWriteTable(con, "ytdata", 
                value = DF, append = TRUE, row.names = FALSE)
   return( DF )
 }
@@ -66,6 +72,13 @@ readFun <- function( filename ) {
 # then using 
 mylist <- lapply(all.files, readFun)
 
+dbListFields(con, "ytdata")
+
+long_trips <- dbSendQuery(con, "SELECT * FROM ytdata WHERE trip_distance > 100")
+dbFetch(long_trips)
+
+long_trips <- dbGetQuery(con, "select * from ytdata where trip_distance > 100")
+head(long_trips)
 
 
 if (!require("plyr")) install.packages("plyr")
