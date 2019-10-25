@@ -6,7 +6,7 @@
 # Clean Up 
 rm(list=ls(all=TRUE))
 cat("\014") 
-
+setwd("./YTData/")
 ## Reading in external data
 ## Prior to attempting this section, download file
 ## "yellow-tripdata_2017-06.csv" from the link on intro-to-r.com
@@ -19,19 +19,8 @@ library("data.table")
 
 #Checking and setting number of cpu threads
 setDTthreads(0)
-getDTthreads(verbose=TRUE)
+getDTthreads()
 
-# Bringing in column headers as names and using them to set names
-### Run as a block of text to time #########
-ptm <- proc.time()
-header <- read.table("yellow_tripdata_2018-07.csv", header = TRUE,
-                     sep=",", nrow = 1)
-DF <- fread("yellow_tripdata_2018-07.csv", skip=1, sep=",",
-            header=FALSE, data.table=FALSE)
-setnames(DF, colnames(header))
-rm(header)
-FREAD_READ_TIME <- (proc.time() - ptm)
-FREAD_READ_TIME
 ########################
 
 # CHeck to see if RPostgreSQL package is installed, and install it if it's not
@@ -49,8 +38,6 @@ pg = dbDriver("PostgreSQL")
 con = dbConnect(pg, user="postgres", password="Pain@2type",
                 host="localhost", port=5432, dbname="postgres")
 dbListTables(con)
-dbWriteTable(con, "YTDATA", 
-             value = DF, append = TRUE, row.names = FALSE)
 
 ## First put all file names into a list 
 library(data.table)
@@ -68,6 +55,7 @@ readFun <- function( filename ) {
               header=FALSE, data.table=FALSE)
   setnames(DF, colnames(header))
   rm(header)
+  message(paste("Writing to PostgreSQL"))
   dbWriteTable(con, "YTDATA", 
                value = DF, append = TRUE, row.names = FALSE)
   return( DF )
