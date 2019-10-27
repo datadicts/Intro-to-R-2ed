@@ -6,7 +6,10 @@
 # Clean Up 
 rm(list=ls(all=TRUE))
 cat("\014")
-getwd()
+
+# Store current working directory
+projdir <- getwd()
+projdir
 
 ## Reading in external data
 ## Prior to attempting this section, download file
@@ -25,7 +28,7 @@ getDTthreads()
 ########################
 
 
-# CHeck to see if RPostgreSQL package is installed, and install it if it's not
+# Check to see if RPostgreSQL package is installed, and install it if it's not
 if (!require("RPostgreSQL")) install.packages("RPostgreSQL")
 
 # Load RPostgreSQL package
@@ -48,7 +51,7 @@ dbRemoveTable(con, "ytdata")
 setwd("./YTData/")
 library(data.table)
 all.files <- list.files(pattern = "*.csv")
-
+all.files
 ## Read data using fread
 readFun <- function( filename ) {
   
@@ -58,7 +61,8 @@ readFun <- function( filename ) {
   header <- read.table(filename, header = TRUE,
                        sep=",", nrow = 1)
   DF <- fread(filename, skip=1, sep=",",
-              header=FALSE, data.table=FALSE)
+              header=FALSE, data.table=FALSE,
+              showProgress=FALSE)
   setnames(DF, colnames(header))
   rm(header)
   message(paste("Writing to PostgreSQL"))
@@ -70,201 +74,19 @@ readFun <- function( filename ) {
 
 
 # then using 
+Time <- Sys.time()
 mylist <- lapply(all.files, readFun)
+Sys.time() - Time
 
 dbListFields(con, "ytdata")
 
-long_trips <- dbSendQuery(con, "SELECT * FROM ytdata WHERE trip_distance > 100")
-dbFetch(long_trips)
+Time <- Sys.time()
+rs <- dbSendQuery(con, "SELECT * FROM ytdata WHERE trip_distance > 100")
+long_trips <- dbFetch(rs)
+dbClearResult(rs)
+Sys.time() - Time
 
-long_trips <- dbGetQuery(con, "select * from ytdata where trip_distance > 100")
-head(long_trips)
+str(long_trips)
+View(long_trips)
 
-
-if (!require("plyr")) install.packages("plyr")
-library( plyr )
-
-
-# execute that function across all files, outputting a data frame
-DF <- plyr::ldply( .data = list.files(pattern="yellow*.csv"),
-                          .fun = readFun,
-                          .parallel = TRUE )
-
-dbListFields(con, "yt_2018")
-# rs <- dbSendQuery(con,"SELECT * from temp")
-long_trips <- dbGetQuery(con, "select * from temp where trip_distance > 100")
-head(long_trips)
-
-
-## Reading in our csv file using fread() from package data.table 
-# Installing data.table (if required) and loading it into memory
-if (!require("data.table")) install.packages("data.table")
-library("data.table")
-
-#Checking and setting number of cpu threads
-getDTthreads()
-getDTthreads(verbose=TRUE)
-setDTthreads(0)
-getDTthreads()
-
-unzip("2018_Yellow_Taxi_Trip_Data.zip")
-memory.size()
-# Doing a timed read of the same file with fread()
-### Run as a block of text to time #########
-ptm <- proc.time()
-DF <- fread("2018_Yellow_Taxi_Trip_Data.csv", header="auto", 
-            data.table=FALSE)
-FREAD_READ_TIME <- (proc.time() - ptm)
-FREAD_READ_TIME
-memory.size()
-############################################
-
-# Examining what we got
-class(DF)
-typeof(DF)
-str(DF)
-names(DF)
-
-# Bringing in column headers as names and using them to set names
-### Run as a block of text to time #########
-ptm <- proc.time()
-header <- read.table("yellow_tripdata_2017-06.csv", header = TRUE,
-                     sep=",", nrow = 1)
-DF <- fread("yellow_tripdata_2017-06.csv", skip=1, sep=",",
-                  header=FALSE, data.table=FALSE)
-setnames(DF, colnames(header))
-rm(header)
-FREAD_READ_TIME <- (proc.time() - ptm)
-FREAD_READ_TIME
-############################################
-
-# Examining what we got again
-class(DF)
-typeof(DF)
-str(DF)
-names(DF)
-
-# Examing the effects of multithreading
-for(i in 1:getDTthreads()) {
-  setDTthreads(i)
-  print(getDTthreads())
-  ptm <- proc.time()
-  header <- read.table("yellow_tripdata_2017-06.csv", header = TRUE,
-                       sep=",", nrow = 1)
-  DF <- fread("yellow_tripdata_2017-06.csv", skip=1, sep=",",
-              header=FALSE, data.table=FALSE,
-              showProgress=FALSE)
-  setnames(DF, colnames(header))
-  rm(header)
-  print(proc.time() - ptm)
-  gc()
-}
-
-# But data.table is not the only game in town...
-# What about package readr?
-
-# Installing readr (if required) and loading it into memory
-if (!require("readr")) install.packages("readr")
-library("readr")
-
-# A timed example of readr::read_csv()
-### Run as a block of text to time #########
-ptm <- proc.time()
-DF <- read_csv("yellow_tripdata_2017-06.csv", col_names=TRUE)
-READR_READ_TIME <- (proc.time() - ptm)
-READR_READ_TIME
-############################################
-
-CSV_READ_TIME
-FREAD_READ_TIME
-
-class(DF)
-typeof(DF)
-str(DF)
-names(DF)
-
-# We've picked a winner: let's run with it. 
-rm(list=ls(all=TRUE))
-cat("\014")
-
-header <- read.table("yellow_tripdata_2017-06.csv", header = TRUE,
-                     sep=",", nrow = 1)
-Yellow_Tripdata_2017_06 <- fread("yellow_tripdata_2017-06.csv",
-                                 skip=1, sep=",",header=FALSE,
-                                 data.table=FALSE)
-setnames(Yellow_Tripdata_2017_06, colnames(header))
-rm(header)
-
-# Looking at our data
-View(Yellow_Tripdata_2017_06)
-str(Yellow_Tripdata_2017_06)
-
-# Using head()
-head(Yellow_Tripdata_2017_06)
-head(Yellow_Tripdata_2017_06, n=3)
-head(Yellow_Tripdata_2017_06$trip_distance, n=10)
-head(Yellow_Tripdata_2017_06[4:5])
-
-# Using summary()
-summary(Yellow_Tripdata_2017_06)
-summary(Yellow_Tripdata_2017_06 $ trip_distance)
-#
-# Throwing out "non-fares"
-Yellow_Tripdata_2017_06 <- Yellow_Tripdata_2017_06[which(
-  Yellow_Tripdata_2017_06$fare_amount>=0 & 
-  Yellow_Tripdata_2017_06$fare_amount<100000),]
-summary(Yellow_Tripdata_2017_06 $ fare_amount)
-
-# Constraining passenger_count to = 1 or 2
-Yellow_Tripdata_2017_06<-Yellow_Tripdata_2017_06[which(
-  Yellow_Tripdata_2017_06$passenger_count==1 | 
-  Yellow_Tripdata_2017_06$passenger_count==2),]
-summary(Yellow_Tripdata_2017_06 $ passenger_count)
-
-# Using data.table:fwrite()to save our curated data as csv:
-fwrite(Yellow_Tripdata_2017_06,"Yellow_Curated.csv")
-
-# Let's re-read our "original" data set,
-# create a sample subset, and save it
-# for the next chapter.
-
-# First, clear memory and the Console 
-rm(list=ls(all=TRUE))
-cat("\014")
-
-# Re-read the csv:
-header <- read.table("yellow_tripdata_2017-06.csv", header = TRUE,
-                     sep=",", nrow = 1)
-DF <- fread("yellow_tripdata_2017-06.csv",
-                                 skip=1, sep=",",header=FALSE,
-                                 data.table=FALSE)
-setnames(DF, colnames(header))
-rm(header)
-
-# Save the "bad" observations so we can clean them out
-# in the next chapter
-DF2<-DF[which(DF$total_amount<=0 |
-                DF$fare_amount >=100000 |
-                DF$fare_amount < 0 |
-                DF$trip_distance >= 100),]
-# Reform DF with only the "good" observations
-DF<-DF[which(DF$total_amount >0 &
-                DF$fare_amount <100000 &
-                DF$fare_amount >= 0 &
-                DF$trip_distance < 100),]
-
-# Select a random subsample of 1,000,000 rows
-set.seed(10)
-index <- sample(1:nrow(DF), 1000000, replace=FALSE)
-
-# Look at the index to see it's just row numbers
-head(index)
-
-# Copy the row numbers for the sample only into Yellow_Sample
-Yellow_Sample <- DF[index,]
-
-# Concatenate (or "bind") the random sample and the "bad" ones
-Yellow_Sample <- rbind(DF2,Yellow_Sample)
-
-# Save the data frame as an R data file
-save(Yellow_Sample,file="Yellow_Sample.RData")
+summary(long_trips$trip_distance)

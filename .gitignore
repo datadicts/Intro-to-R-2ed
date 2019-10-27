@@ -2,6 +2,7 @@
 *.csv
 *.RData
 *.zip
+*.exe
 
 # History files
 .Rhistory
