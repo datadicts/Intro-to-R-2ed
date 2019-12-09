@@ -1,5 +1,6 @@
 ############################################################
-# R script to accompany Intro to R for Business, Chapter 5 #
+# R script to accompany Intro to R for Business, Chapter 06#
+# (Low Memory Version)                                     #
 # Written by Troy Adair                                    #
 ############################################################
 

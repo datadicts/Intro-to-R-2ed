@@ -1,5 +1,5 @@
 ############################################################
-# R script to accompany Intro to R for Business, Chapter 8 #
+# R script to accompany Intro to R for Business, Chapter 07#
 # Written by Troy Adair                                    #
 ############################################################
 
