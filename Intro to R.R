@@ -1,5 +1,5 @@
-# R script to accopany Intro to R
-# Copy for RStudent 2019
+# R script to accompany Intro to R
+# Sophie Robinson
 ######################################################
 
 # You will see that you can put non-executable "comment" lines
